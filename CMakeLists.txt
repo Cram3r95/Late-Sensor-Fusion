@@ -146,7 +146,7 @@ include_directories(
 add_executable(sensor_fusion_node
   src/sensor_fusion.cpp
   include/sensor_fusion/Hungarian.hpp
-  include/sensor_fusion/Point.h
+  include/sensor_fusion/Point.hpp
   src/Hungarian.cpp)
 
 add_executable(bev_from_2d_object_detector_node 
