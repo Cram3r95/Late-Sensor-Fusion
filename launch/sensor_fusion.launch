@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="sensor_fusion" type="bev_from_2d_object_detector_node" name="bev_from_2d_object_detector_node" output="screen"/>
+    <node pkg="sensor_fusion" type="sensor_fusion_node" name="sensor_fusion_node" output="screen"/>
+</launch>
