@@ -58,6 +58,7 @@ Executed via
 // Global variables //
 
 double road_curvature = 0;
+double max_road_curvature = 20;
 
 // End Global variables //
 
@@ -157,7 +158,7 @@ void road_curvature_cb(const std_msgs::Float64::ConstPtr& road_curvature_msg)
 
 	float xmax, xmin, ymax, ymin, a;
 	
-	a = road_curvature/130;
+	a = road_curvature/max_road_curvature;
 	xmax = a*14.0;
     xmin = 0;
     ymax = a*2.0;
@@ -191,7 +192,7 @@ void sensor_fusion_callback(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_
 
 	float xmax, xmin, ymax, ymin, a;
 	
-	a = road_curvature/130;
+	a = road_curvature/max_road_curvature;
 	xmax = a*14.0;
     xmin = 0;
     ymax = a*2.0;
