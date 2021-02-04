@@ -69,11 +69,6 @@ double max_road_curvature = 20;
 
 ros::Publisher pub_merged_obstacles_marker_array;
 ros::Publisher pub_merged_obstacles;
-ros::Publisher pub_monitorized_area;
-
-// Subcribers
-
-ros::Subscriber sub_road_curvature;
 
 // End ROS communications //
 
@@ -81,13 +76,11 @@ ros::Subscriber sub_road_curvature;
 // Declarations of functions //
 
 double euclidean_distance(Point , Point );
-bool inside_monitorized_area(Point , float []);
 
 // ROS Callbacks
 
 void sensor_fusion_callback(const t4ac_msgs::BEV_detections_list::ConstPtr& , 
 							const t4ac_msgs::BEV_detections_list::ConstPtr& );
-void road_curvature_cb(const std_msgs::Float64::ConstPtr& );
 
 // End Declarations of functions //
 
@@ -103,19 +96,18 @@ int main (int argc, char ** argv)
 
     // Publishers
 
-    pub_merged_obstacles_marker_array = nh.advertise<visualization_msgs::MarkerArray>("/perception/detection/merged_obstacles_marker", 100, true);
-	pub_merged_obstacles = nh.advertise<t4ac_msgs::BEV_detections_list>("/perception/detection/merged_obstacles", 100, true);
-	pub_monitorized_area = nh.advertise<visualization_msgs::Marker>("/perception/detection/monitorized_area_marker", 100, true);
+    pub_merged_obstacles_marker_array = nh.advertise<visualization_msgs::MarkerArray>("/t4ac/perception/detection/merged_obstacles_marker", 100, true);
+	pub_merged_obstacles = nh.advertise<t4ac_msgs::BEV_detections_list>("/t4ac/perception/detection/merged_obstacles", 100, true);
 
 	// Subscribers
 
-	sub_road_curvature = nh.subscribe("/control/rc", 10, road_curvature_cb);
+	// CARLA Challenge // sub_road_curvature = nh.subscribe("/control/rc", 10, road_curvature_cb);
 
 	message_filters::Subscriber<t4ac_msgs::BEV_detections_list> sub_bev_image_detections;
 	message_filters::Subscriber<t4ac_msgs::BEV_detections_list> sub_bev_lidar_detections;
 
-	sub_bev_image_detections.subscribe(nh, "/perception/detection/bev_image_obstacles", 10);
-	sub_bev_lidar_detections.subscribe(nh, "/perception/detection/bev_lidar_obstacles", 10);
+	sub_bev_image_detections.subscribe(nh, "/t4ac//perception/detection/bev_image_obstacles", 10);
+	sub_bev_lidar_detections.subscribe(nh, "/t4ac/perception/detection/bev_lidar_obstacles", 10);
 
 	// Callback 1: Synchronize LiDAR point cloud based BEV detections and Depth map & 2D Object detectio based BEV detections
 
@@ -139,47 +131,7 @@ double euclidean_distance(Point bev_image_detection, Point bev_lidar_detection)
 	return ed;
 }
 
-bool inside_monitorized_area(Point bev_detection, float monitorized_area[])
-{
-	if (bev_detection.get_x() < monitorized_area[0] && bev_detection.get_x() > monitorized_area[1]
-		&& bev_detection.get_y() < monitorized_area[2] && bev_detection.get_y() > monitorized_area[3])
-		return true;
-	else
-		return false;
-}
-
 // Callbacks
-
-void road_curvature_cb(const std_msgs::Float64::ConstPtr& road_curvature_msg)
-{
-	road_curvature = road_curvature_msg->data;
-
-	visualization_msgs::Marker monitorized_area_marker;
-
-	float xmax, xmin, ymax, ymin, a;
-	
-	a = road_curvature/max_road_curvature;
-	xmax = a*14.0;
-    xmin = 0;
-    ymax = a*2.0;
-    ymin = a*(-2.5);
-
-	monitorized_area_marker.header.frame_id = "velodyne";
-	monitorized_area_marker.type = visualization_msgs::Marker::CUBE;
-	monitorized_area_marker.lifetime = ros::Duration(0.40);
-	monitorized_area_marker.pose.position.x = xmax/2;
-	monitorized_area_marker.pose.position.y = (ymin+ymax)/2;
-	monitorized_area_marker.pose.position.z = -2;
-	monitorized_area_marker.scale.x = xmax;
-	monitorized_area_marker.scale.y = abs(ymin)+ymax;
-	monitorized_area_marker.scale.z = 0.3;
-	monitorized_area_marker.color.r = 255;
-	monitorized_area_marker.color.g = 255;
-	monitorized_area_marker.color.b = 255;
-	monitorized_area_marker.color.a = 0.4;
-
-	pub_monitorized_area.publish(monitorized_area_marker);
-}
 
 void sensor_fusion_callback(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_detections_msg, 
                             const t4ac_msgs::BEV_detections_list::ConstPtr& bev_lidar_detections_msg)
@@ -187,18 +139,6 @@ void sensor_fusion_callback(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_
 	visualization_msgs::MarkerArray merged_obstacles_marker_array;
 	t4ac_msgs::BEV_detections_list merged_obstacles;
 	std::vector<int> evaluated_lidar_obstacles;
-
-	// Define monitorized area
-
-	float xmax, xmin, ymax, ymin, a;
-	
-	a = road_curvature/max_road_curvature;
-	xmax = a*14.0;
-    xmin = 0;
-    ymax = a*2.0;
-    ymin = a*(-2.5);
-
-	float monitorized_area[] = {xmax,xmin,ymax,ymin};
 
 	// Associate bev_detections using GNN (Global Nearest Neighbour) algorithm. TODO: Improve this late fusion
 
@@ -214,8 +154,6 @@ void sensor_fusion_callback(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_
 		string type = bev_image_detections_msg->bev_detections_list[i].type;
 		float score = bev_image_detections_msg->bev_detections_list[i].score;
 
-		Point bev_image_detection(x_image, y_image);
-
 		if (bev_lidar_detections_msg->bev_detections_list.size() > 0)
 		{
 			float x_closest_lidar, y_closest_lidar;
@@ -230,26 +168,20 @@ void sensor_fusion_callback(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_
 				float y_aux = (bev_lidar_detections_msg->bev_detections_list[j].y_corners[2]+
 				               bev_lidar_detections_msg->bev_detections_list[j].y_corners[3]) / 2;
 				y_aux += bev_lidar_detections_msg->bev_detections_list[j].y;
-				
-				Point bev_lidar_detection(x_aux, y_aux);
 
-				if (inside_monitorized_area(bev_lidar_detection,monitorized_area))
+				double ed = euclidean_distance(bev_image_detection, bev_lidar_detection);
+
+				if (ed < max_diff)
 				{
-					double ed = euclidean_distance(bev_image_detection, bev_lidar_detection);
-
-					if (ed < max_diff)
-					{
-						max_diff = ed;
-						index_most_similar = j;
-						x_closest_lidar = x_aux;
-						y_closest_lidar = y_aux;
-					}
+					max_diff = ed;
+					index_most_similar = j;
+					x_closest_lidar = x_aux;
+					y_closest_lidar = y_aux;
 				}
 			}
 
 			if ((index_most_similar != -1 && 
-			    !(std::find(evaluated_lidar_obstacles.begin(), evaluated_lidar_obstacles.end(), index_most_similar) != evaluated_lidar_obstacles.end()))
-				|| inside_monitorized_area(bev_image_detection,monitorized_area))
+			    !(std::find(evaluated_lidar_obstacles.begin(), evaluated_lidar_obstacles.end(), index_most_similar) != evaluated_lidar_obstacles.end())))
 			{
 				evaluated_lidar_obstacles.push_back(index_most_similar);
 
