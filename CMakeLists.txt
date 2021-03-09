@@ -166,7 +166,6 @@ add_dependencies(sensor_fusion_node
   ${catkin_EXPORTED_TARGETS})
 
 add_dependencies(bev_from_2d_object_detector_node 
-  darknet_ros 
   ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
